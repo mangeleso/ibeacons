@@ -154,12 +154,6 @@ public class DeviceControlActivity extends Activity {
                         /*TODO: Implement for notifications*/
                         if ((charaProp | BluetoothGattCharacteristic.PROPERTY_NOTIFY) > 0) {
                             if ((charaProp & BluetoothGattCharacteristic.PROPERTY_WRITE) == 0) {
-                                if(checkBox.isChecked()){
-                                    Log.d(TAG, "In property NOTIFY....");
-                                    mNotifyCharacteristic = characteristic;
-                                    mBluetoothLeService.setCharacteristicNotification(
-                                            characteristic, true);
-                                }
                             }
                         }
                         /*TODO: Implement for fan control*/
@@ -167,8 +161,6 @@ public class DeviceControlActivity extends Activity {
                             mNotifyCharacteristic = characteristic;
                             Log.d(TAG, "In property WRITE...."+charaProp);
                             //byte [] dataSent =  new byte[] {(byte)0xc3,(byte) 0x50};
-                            mBluetoothLeService.writeCharacteristic(
-                                    characteristic,checkBox.isChecked());
                         }
                         return true;
                     }
@@ -179,8 +171,6 @@ public class DeviceControlActivity extends Activity {
     private void clearUI() {
         mGattServicesList.setAdapter((SimpleExpandableListAdapter) null);
         //mDataField.setText(R.string.no_data);
-        mDataFieldTemp.setText(R.string.no_data);
-        mDataFieldHum.setText(R.string.no_data);
 
         majorDataField.setText(R.string.no_data);
         txDataField.setText(R.string.no_data);
@@ -302,7 +292,7 @@ public class DeviceControlActivity extends Activity {
         Log.d(TAG,"Showing Temp: ");
         //Log.d(TAG, data + " °C");
         if (data != null) {
-            mDataFieldTemp.setText(data + " °C");
+            //mDataFieldTemp.setText(data + " °C");
         }
     }
 
@@ -329,7 +319,7 @@ public class DeviceControlActivity extends Activity {
             Log.d(TAG, "Humidity4 string: " + humidity.toString());
             float n = Long.parseLong(humidity.toString(), 16);
             n = n*0.01f;
-            mDataFieldHum.setText(String.valueOf(n) + "%");
+            //mDataFieldHum.setText(String.valueOf(n) + "%");
             //mDataFieldHum.setText(humidity.toString() + "%");
             //mDataFieldHum.setText(data + "%");
         }
