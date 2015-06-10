@@ -3,6 +3,11 @@ package com.example.piris.weatherapp;
 /**
  * Created by PIRIS on 5/19/2015.
  */
+import com.jjoe64.graphview.series.DataPoint;
+import com.jjoe64.graphview.series.BaseSeries;
+import com.jjoe64.graphview.series.LineGraphSeries;
+import com.jjoe64.graphview.series.LineGraphSeries;
+import com.jjoe64.graphview.GraphView;
 import android.app.Activity;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
@@ -24,8 +29,11 @@ import android.widget.ExpandableListView;
 import android.widget.SimpleExpandableListAdapter;
 import android.widget.TextView;
 
+import com.jjoe64.graphview.GraphView;
+
 import org.w3c.dom.Text;
 
+import java.lang.ref.PhantomReference;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -35,6 +43,7 @@ public class DeviceControlActivity extends Activity {
 
     public static final String EXTRAS_DEVICE_NAME = "DEVICE_NAME";
     public static final String EXTRAS_DEVICE_ADDRESS = "DEVICE_ADDRESS";
+    public static final String EXTRAS_ERROR = "ERROR";
 
     //for ibeacons
     public static final String EXTRAS_TX_DATA = "TX_DATA";
@@ -42,6 +51,9 @@ public class DeviceControlActivity extends Activity {
     public static final String EXTRAS_MINOR = "MINOR";
     public static final String EXTRAS_UUID = "UUID";
     public static final String EXTRAS_PREFIX = "PREFIX";
+    public static final String EXTRAS_RSSI = "RSSI";
+    public static final String EXTRAS_DISTANCE = "DISTANCE";
+
 
     private TextView mConnectionState;
 
@@ -51,9 +63,10 @@ public class DeviceControlActivity extends Activity {
     private TextView minorDataField;
     private TextView prefixDataField;
     private TextView uuidDataField;
+    private TextView rssiDataField;
+    private TextView distanceDataField;
 
-
-
+    private ArrayList<Double> error;
 
     private String mDeviceName;
     private String mDeviceAddress;
@@ -176,16 +189,18 @@ public class DeviceControlActivity extends Activity {
         txDataField.setText(R.string.no_data);
         minorDataField.setText(R.string.no_data);
 
-        //rssiDataField.setText(R.string.no_data);
+        distanceDataField.setText(R.string.no_data);
         prefixDataField.setText("No data");
         uuidDataField.setText("No data");
-
+        rssiDataField.setText("No data");
     }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.gatt_services_characteristics);
+
+
 
         final Intent intent = getIntent();
         mDeviceName = intent.getStringExtra(EXTRAS_DEVICE_NAME);
@@ -196,11 +211,16 @@ public class DeviceControlActivity extends Activity {
         String beaconMajor = intent.getStringExtra(EXTRAS_MAJOR);
         String beaconPrefix = intent.getStringExtra(EXTRAS_PREFIX);
         String beaconUUID = intent.getStringExtra(EXTRAS_UUID);
-
+        String beaconRssi = intent.getStringExtra(EXTRAS_RSSI);
+        String beaconDistance = intent.getStringExtra(EXTRAS_DISTANCE);
+        error =  (ArrayList<Double>) getIntent().getSerializableExtra(EXTRAS_ERROR);
+        Log.e(TAG, "In device ************************************");
+        Log.e(TAG, Integer.toString(error.size()));
+        Log.e(TAG, Double.toString(error.get(1)));
 
 
         // Sets up UI references.
-        ((TextView) findViewById(R.id.device_address)).setText(mDeviceAddress);
+                ((TextView) findViewById(R.id.device_address)).setText(mDeviceAddress);
         mGattServicesList = (ExpandableListView) findViewById(R.id.gatt_services_list);
         mGattServicesList.setOnChildClickListener(servicesListClickListner);
         mConnectionState = (TextView) findViewById(R.id.connection_state);
@@ -213,15 +233,18 @@ public class DeviceControlActivity extends Activity {
         minorDataField = (TextView) findViewById(R.id.data_value_minor);
         uuidDataField = (TextView) findViewById(R.id.data_value_uuid);
         prefixDataField = (TextView) findViewById(R.id.data_value_prefix);
-
-        //rssiDataField = (TextView) findViewById(R.id.data_value_rssi);
+        distanceDataField  =(TextView) findViewById(R.id.data_value_meters);
+        rssiDataField = (TextView) findViewById(R.id.data_value_rssi);
 
 
         getActionBar().setTitle(mDeviceName);
         getActionBar().setDisplayHomeAsUpEnabled(true);
 
 
-        displayBeacon(beacondTx, beaconMinor, beaconMajor, beaconPrefix, beaconUUID);
+        displayBeacon(beacondTx, beaconMinor, beaconMajor, beaconPrefix, beaconUUID, beaconRssi, beaconDistance, error);
+
+
+
 
         Intent gattServiceIntent = new Intent(this, BluetoothLeService.class);
         bindService(gattServiceIntent, mServiceConnection, BIND_AUTO_CREATE);
@@ -326,12 +349,30 @@ public class DeviceControlActivity extends Activity {
     }
 
 
-    private void displayBeacon(String tx, String minor, String major,String prefix, String uuidB){
+    private void displayBeacon(String tx, String minor, String major,String prefix, String uuidB, String rssi, String meters, ArrayList<Double> data){
         txDataField.setText(tx);
         minorDataField.setText(minor);
         majorDataField.setText(major);
         prefixDataField.setText(prefix);
         uuidDataField.setText(uuidB);
+        rssiDataField.setText(rssi);
+        distanceDataField.setText(meters);
+
+        GraphView graph = (GraphView) findViewById(R.id.graph);
+
+        if(data.size() >= 5){
+            LineGraphSeries<DataPoint> series = new LineGraphSeries<DataPoint>(new DataPoint[] {
+
+                    new DataPoint(1, data.get(0)),
+                    new DataPoint(2, data.get(1)),
+                    new DataPoint(3, data.get(2)),
+                    new DataPoint(4, data.get(3)),
+                    new DataPoint(5, data.get(4))
+            });
+
+            graph.addSeries(series);
+        }
+
     }
 
     // Demonstrates how to iterate through the supported GATT Services/Characteristics.

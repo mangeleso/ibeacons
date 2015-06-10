@@ -10,6 +10,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Handler;
+import android.os.SystemClock;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 import java.nio.ByteBuffer;
@@ -23,6 +24,8 @@ import android.widget.BaseAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import android.bluetooth.le.ScanFilter;
 
@@ -34,29 +37,89 @@ public class MainActivity extends ListActivity {
     private final static String TAG = DeviceControlActivity.class.getSimpleName();
 
     // for ibeacons getting last scan values for tx, minor,  major and uuid
+
+    private ArrayList<Integer> rssiListA = new ArrayList<Integer>();
+    private ArrayList<Integer> rssiListB = new ArrayList<Integer>();
+    private ArrayList<Integer> rssiListC = new ArrayList<Integer>();
+    private ArrayList<Double> errorA = new ArrayList<Double>();
+    private ArrayList<Double> errorB = new ArrayList<Double>();
+    private ArrayList<Double> errorC = new ArrayList<Double>();
+
+    //public int [] errorA = new int [5];
+    //public int [] errorB = new int [5];
+    //public int [] errorC = new int [5];
+    /*******************************************************************/
+    private int meters = 1;
     private HashMap TxLastScan = new HashMap<String, Integer>();
     private HashMap MajorLastScan = new HashMap<String, Integer>();
     private HashMap MinorLastScan = new HashMap<String, Integer>();
     private HashMap UUIDLastScan = new HashMap<String, String>();
     private HashMap PrefixLastScan = new HashMap<String, Integer>();
+    private HashMap RssiLastScan = new HashMap<String, Integer>();
+    private HashMap distanceLastScan = new HashMap<String, Double>();
+    private HashMap calibratedRSSI = new HashMap<String, Integer>();
+    private HashMap calibratedDistance = new HashMap<String, Double>();
+    private boolean firstScanDone = false;
+    private boolean secondScanDone = false;
 
-    //private HashMap RssiLastScan = new HashMap<String, Integer>();
+    /************/
+    private HashMap firstCal = new HashMap<String, Double>();
+    private HashMap secondCal = new HashMap<String, Double>();
+    private HashMap afterCal = new HashMap<String, Double>();
+
+
+
+
 
     private String iBeaconUUID = "e2c56db5-dffb-48d2-b060-d0f5a71096e0";
     private HashMap iBeacons = new HashMap<String, Boolean>();
-
-
-
+    private HashMap calibrateVal = new HashMap<String, Integer>();
     private LeDeviceListAdapter mLeDeviceListAdapter;
     private BluetoothAdapter mBluetoothAdapter;
     private BluetoothLeScanner mBluetoothLeScanner;
-    private boolean mScanning;
+    private volatile boolean mScanning;
     private Handler mHandler;
     private static final int REQUEST_ENABLE_BT = 1;
     // Stops scanning after 10 seconds.
-    private static final long SCAN_PERIOD = 10000;
-
+    private static final long SCAN_PERIOD = 1500;
+    private static final long STOP_INTERVAL = 500;
     private static final String LOG_TAG = "debugger";
+    private static boolean isSecondScan = false;
+
+
+
+    private Runnable startScan = new Runnable() {
+        @Override
+        public void run() {
+
+            printRssi();
+            if(rssiListA.size() == 10 && rssiListB.size() == 10 && rssiListC.size() == 10)// WHen is taken 10 samples
+            //if(rssiListA.size() == 3 && rssiListB.size() == 3 && rssiListC.size() == 3)// WHen is taken 10 samples
+            {
+                    if(errorA.size() <= 5 && errorA.size() <= 5  && errorC.size() <= 5)
+                    {
+
+                        mBluetoothAdapter.stopLeScan(mLeScanCallback);
+                        Compare();
+                    }
+
+
+            }
+            else{
+                mBluetoothAdapter.startLeScan(mLeScanCallback);
+                mHandler.postDelayed(stopScan, SCAN_PERIOD);
+            }
+        }
+    };
+
+    private Runnable stopScan = new Runnable() {
+        @Override
+        public void run() {
+            mBluetoothAdapter.stopLeScan(mLeScanCallback);
+            mHandler.postDelayed(startScan, STOP_INTERVAL);
+        }
+    };
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -88,12 +151,6 @@ public class MainActivity extends ListActivity {
             finish();
             return;
         }
-
-
-        // istantiate BL Scaner of beacons jiji
-       // mBluetoothLeScanner = mBluetoothAdapter.getBluetoothScanner();
-
-
     }
 
     @Override
@@ -107,6 +164,7 @@ public class MainActivity extends ListActivity {
         } else {
             menu.findItem(R.id.menu_stop).setVisible(true);
             menu.findItem(R.id.menu_scan).setVisible(false);
+            menu.findItem(R.id.menu_makeScans).setVisible(false);
            menu.findItem(R.id.menu_refresh).setActionView(
                    R.layout.actionbar_indeterminate_progress);
         }
@@ -118,10 +176,22 @@ public class MainActivity extends ListActivity {
         switch (item.getItemId()) {
             case R.id.menu_scan:
                 mLeDeviceListAdapter.clear();
-                scanLeDevice(true);
+
+                //while(rssiListA.size() < 10) {
+                    scanLeDevice(true);
+                   // SystemClock.sleep(17000);
+                //}
+                //printRssi();
                 break;
             case R.id.menu_stop:
                 scanLeDevice(false);
+                break;
+            case R.id.menu_makeScans:
+                Toast.makeText(this, "Please go ahead and place yourself at " + meters + " m", Toast.LENGTH_SHORT).show();
+                //mHandlerstartScan.run();
+                mHandler.postDelayed(startScan, 1000);
+                break;
+            case R.id.menu_move:
                 break;
         }
         return true;
@@ -143,7 +213,7 @@ public class MainActivity extends ListActivity {
         // Initializes list view adapter.
         mLeDeviceListAdapter = new LeDeviceListAdapter();
         setListAdapter(mLeDeviceListAdapter);
-        scanLeDevice(true);
+        //scanLeDevice(true);
     }
 
     @Override
@@ -176,6 +246,14 @@ public class MainActivity extends ListActivity {
             intent.putExtra(DeviceControlActivity.EXTRAS_MAJOR, MajorLastScan.get(device.getAddress()).toString());
             intent.putExtra(DeviceControlActivity.EXTRAS_UUID, UUIDLastScan.get(device.getAddress()).toString());
             intent.putExtra(DeviceControlActivity.EXTRAS_PREFIX, PrefixLastScan.get(device.getAddress()).toString());
+            intent.putExtra(DeviceControlActivity.EXTRAS_RSSI, RssiLastScan.get(device.getAddress()).toString());
+            intent.putExtra(DeviceControlActivity.EXTRAS_DISTANCE, distanceLastScan.get(device.getAddress()).toString());
+            if (device.getAddress().equals("00:1A:7D:DA:71:07"))
+                intent.putExtra(DeviceControlActivity.EXTRAS_ERROR, errorA);
+            else if (device.getAddress().equals("00:1A:7D:DA:71:13"))
+                intent.putExtra(DeviceControlActivity.EXTRAS_ERROR,  errorB);
+            if (device.getAddress().equals("5C:F3:70:61:43:C8"))
+                intent.putExtra(DeviceControlActivity.EXTRAS_ERROR,  errorC);
 
         }
         else {
@@ -184,6 +262,8 @@ public class MainActivity extends ListActivity {
             intent.putExtra(DeviceControlActivity.EXTRAS_MAJOR, "No data");
             intent.putExtra(DeviceControlActivity.EXTRAS_PREFIX, "No data");
             intent.putExtra(DeviceControlActivity.EXTRAS_UUID, "No data");
+            intent.putExtra(DeviceControlActivity.EXTRAS_RSSI, "No data");
+            intent.putExtra(DeviceControlActivity.EXTRAS_DISTANCE, "No data");
         }
         if (mScanning) {
             mBluetoothAdapter.stopLeScan(mLeScanCallback);
@@ -192,9 +272,106 @@ public class MainActivity extends ListActivity {
         startActivity(intent);
     }
 
+
+
+    private void makePlotBars(){
+
+
+
+        Log.d(TAG, "Plootiingg........******************************************************************");
+
+        for (int i = 0; i<errorA.size(); i++) {
+            Log.d(TAG, Double.toString(errorA.get(i)));
+            Log.d(TAG, Double.toString(errorB.get(i)));
+            Log.d(TAG, Double.toString(errorC.get(i)));
+
+        }
+        Toast.makeText(this, "sTARTINT TO PLOT ", Toast.LENGTH_SHORT).show();
+
+    }
+
+
+    private void makeSecondScan(){
+        emptyLists();
+        secondScanDone = true;
+        startScan.run();
+
+    }
+
+    //Get average of samples
+    private  void Compare(){
+
+
+        Integer sumA = 0;
+        Integer sumB = 0;
+        Integer sumC = 0;
+        for(int rssi : rssiListA){
+            sumA += rssi;
+        }
+        for(int rssi : rssiListB){
+            sumB += rssi;
+        }
+
+        for(int rssi : rssiListC){
+            sumC += rssi;
+        }
+
+
+
+        double expectedValueA = sumA.doubleValue() / rssiListA.size();
+        double expectedValueB = sumB.doubleValue() / rssiListB.size();
+        double expectedValueC = sumC.doubleValue() / rssiListC.size();
+        calibratedRSSI.put("00:1A:7D:DA:71:07", expectedValueA);
+        calibratedRSSI.put("00:1A:7D:DA:71:13", expectedValueB);
+        calibratedRSSI.put("5C:F3:70:61:43:C8", expectedValueC);
+
+        calibratedDistance.put("00:1A:7D:DA:71:07", calculateDistance((Integer) TxLastScan.get("00:1A:7D:DA:71:07"), expectedValueA));
+        calibratedDistance.put("00:1A:7D:DA:71:13", calculateDistance((Integer) TxLastScan.get("00:1A:7D:DA:71:13"), expectedValueB));
+        calibratedDistance.put("5C:F3:70:61:43:C8", calculateDistance((Integer) TxLastScan.get("5C:F3:70:61:43:C8"), expectedValueC));
+
+
+
+
+        errorA.add(Math.abs((double) calibratedDistance.get("00:1A:7D:DA:71:07") - (double) meters));
+        errorB.add(Math.abs((double) calibratedDistance.get("00:1A:7D:DA:71:13") - (double) meters));
+        errorC.add(Math.abs((double) calibratedDistance.get("5C:F3:70:61:43:C8") - (double) meters));
+
+
+
+        emptyLists();
+
+
+        if (meters <= 5)
+        {
+
+            Toast.makeText(this, "Please go and move " + Integer.toString(meters) + " meters away more", Toast.LENGTH_SHORT).show();
+
+            mHandler.postDelayed(startScan, STOP_INTERVAL);
+
+        }
+
+        else {
+
+            makePlotBars();
+
+        }
+
+
+        meters++;
+
+
+    }
+
+    private void emptyLists(){
+        rssiListA.clear();
+        rssiListB.clear();
+        rssiListC.clear();
+    }
+
     private void scanLeDevice(final boolean enable) {
         if (enable) {
             // Stops scanning after a pre-defined scan period.
+
             mHandler.postDelayed(new Runnable() {
                 @Override
                 public void run() {
@@ -202,10 +379,11 @@ public class MainActivity extends ListActivity {
                     mBluetoothAdapter.stopLeScan(mLeScanCallback);
                     invalidateOptionsMenu();
                 }
-            }, SCAN_PERIOD);
+            },SCAN_PERIOD);
 
             mScanning = true;
             mBluetoothAdapter.startLeScan(mLeScanCallback);
+
         } else {
             mScanning = false;
             mBluetoothAdapter.stopLeScan(mLeScanCallback);
@@ -262,9 +440,12 @@ public class MainActivity extends ListActivity {
                 viewHolder = new ViewHolder();
                 viewHolder.deviceAddress = (TextView) view.findViewById(R.id.device_address);
                 viewHolder.deviceName = (TextView) view.findViewById(R.id.device_name);
+                viewHolder.distance = (TextView) view.findViewById(R.id.device_distance);
+                viewHolder.RSSI = (TextView) view.findViewById(R.id.device_rssi);
                 view.setTag(viewHolder);
             } else {
                 viewHolder = (ViewHolder) view.getTag();
+
             }
 
             BluetoothDevice device = mLeDevices.get(i);
@@ -272,12 +453,21 @@ public class MainActivity extends ListActivity {
             if (deviceName != null && deviceName.length() > 0)
                 viewHolder.deviceName.setText(deviceName);
             else {
-                if (iBeacons.containsKey(device.getAddress()))
+                if (iBeacons.containsKey(device.getAddress())) {
                     viewHolder.deviceName.setText("iBeacon");
+
+                    //if( calibratedDistance.isEmpty()) {
+                    viewHolder.distance.setText("Distance in m: " + new DecimalFormat("##.##").format(distanceLastScan.get(device.getAddress())));
+                    viewHolder.RSSI.setText("RSSI: " + RssiLastScan.get(device.getAddress()).toString());
+
+                }
                 else
-                    viewHolder.deviceName.setText("Not found");
+                    viewHolder.deviceName.setText("Unknown");
+                //String dist = distanceLastScan.get(device.getAddress()).toString();
             }
             viewHolder.deviceAddress.setText(device.getAddress());
+            //String dist = distanceLastScan.get(device.getAddress()).toString();
+            //viewHolder.distance.setText(distanceLastScan.get(device.getAddress()).toString());
             return view;
         }
     }
@@ -289,34 +479,31 @@ public class MainActivity extends ListActivity {
                 @Override
                 public void onLeScan(final BluetoothDevice device, final int rssi, final byte[] scanRecord) {
                     runOnUiThread(new Runnable() {
-
-
                         @Override
                         public void run() {
                             if(iBeacons.containsKey(device.getAddress())){
-                                Log.d(TAG, "IN SCAN CALL BACK ");
-                                Log.d(TAG, Integer.toString(scanRecord.length));
-                                Log.d(TAG, "RSSI>");
-                                Log.d(TAG, Integer.toString(rssi));
                                 Parcer par = new Parcer(scanRecord);
+                                double distance_Beacon =  calculateAccuracy(par.getTX(), (double) rssi);
+                                double distanceI = calculateDistance(par.getTX(), (double) rssi);
 
                                 TxLastScan.put(device.getAddress(), par.getTX());
                                 MinorLastScan.put(device.getAddress(), par.getMinor());
                                 MajorLastScan.put(device.getAddress(), par.getMajor());
                                 UUIDLastScan.put(device.getAddress(), iBeaconUUID);
                                 PrefixLastScan.put(device.getAddress(), par.getPrefix());
+                                RssiLastScan.put(device.getAddress(), rssi);
 
-                                /*
-                                for (int i = 0; i < scanRecord.length; i++){
-                                    if(i == 29)
-                                          TxLastScan.put(device.getAddress(), scanRecord[i]);
-                                    Log.d(TAG, "i: " + Integer.toString(i) + " value:" + Byte.toString(scanRecord[i]));
-                                    Log.d(TAG, Byte.toString(scanRecord[i]));
+                                if (device.getAddress().equals("00:1A:7D:DA:71:07"))
+                                    rssiListA.add(rssi);
+                                else if (device.getAddress().equals("00:1A:7D:DA:71:13"))
+                                    rssiListB.add(rssi);
+                                else if (device.getAddress().equals("5C:F3:70:61:43:C8"))
+                                    rssiListC.add(rssi);
+                                distanceLastScan.put(device.getAddress(), distanceI);
 
-                              }*/
+
 
                             }
-
                             mLeDeviceListAdapter.addDevice(device);
                             mLeDeviceListAdapter.notifyDataSetChanged();
                         }
@@ -376,10 +563,51 @@ public class MainActivity extends ListActivity {
 
     }
 
+
+    public static double calculateAccuracy(int txPower, double rssi) {
+        if (rssi == 0) {
+            return -1.0; // if we cannot determine accuracy, return -1.
+        }
+
+        double ratio = rssi*1.0/txPower;
+        if (ratio < 1.0) {
+            return Math.pow(ratio,10);
+        }
+        else {
+            double accuracy =  (0.89976)*Math.pow(ratio,7.7095) + 0.111;
+            return accuracy;
+        }
+    }
+
+    public static double calculateDistance(int txPower, double rssi) {
+        if (rssi == 0) {
+            return -1.0; // if we cannot determine accuracy, return -1.
+        }
+
+        double d = Math.exp(Math.log(10)*(rssi - txPower)/(-20));
+        return d;
+    }
+
+    public static double calculateRssi(int distance, int Tx){
+        double d = (double) distance;
+        double calculatedRssi = (-20)*Math.log10(d) + Tx;
+        return calculatedRssi;
+    }
+
+
+    public void printRssi(){
+        Log.d(TAG, "IN PRINTITG THE LIST");
+        int size = rssiListA.size();
+        Log.d(TAG, Integer.toString(size));
+        //for (int i = 0; i < size; i++)
+          //  Log.d(TAG, Integer.toString(rssiListA.get(i)));
+    }
+
     static class ViewHolder {
         TextView deviceName;
         TextView deviceAddress;
-        
+        TextView distance;
+        TextView RSSI;
     }
 }
 

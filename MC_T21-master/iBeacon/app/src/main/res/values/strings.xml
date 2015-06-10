@@ -11,7 +11,7 @@
     <string name="no_data">No data</string>
     <string name="connected">Connected</string>
     <string name="disconnected">Disconnected</string>
-    <string name="title_devices">BLE Device Scan</string>
+    <string name="title_devices">BLE Scan</string>
     <string name="error_bluetooth_not_supported">Bluetooth not supported.</string>
 
     <string name="unknown_device">Unknown device</string>
@@ -29,6 +29,8 @@
     <string name="menu_disconnect">Disconnect</string>
     <string name="menu_scan">Scan</string>
     <string name="menu_stop">Stop</string>
+    <string name="menu_Scans">Calib. and Plot</string>
+    <string name="menu_move">Move and cal</string>
 
     <!-- Ibeacons -->
     <string name="label_data_tx">TxPower:</string>
@@ -37,5 +39,6 @@
     <string name="label_data_rssi">Rssi:</string>
     <string name="label_data_uuid">UUID_beacon:</string>
     <string name="label_data_prefix">Prefix:</string>
+    <string name="label_data_meters">Distance:</string>
 
 </resources>

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<items version="2" >
+
+    <item
+        jar="/home/michel/Android/Sdk/extras/android/m2repository/com/android/support/support-annotations/22.1.1/support-annotations-22.1.1.jar"
+        jumboMode="false"
+        revision="22.0.1"
+        sha1="01d051a6bfb1218b1db2d3a5af0480ac2c25c42a">
+        <dex dex="/home/michel/Desktop/ibeacons/ibeacons/MC_T21-master/iBeacon/app/build/intermediates/pre-dexed/debug/support-annotations-22.1.1-24ae73c6845a9f79efe1096a822d587a14499e02.jar" />
+    </item>
+    <item
+        jar="/home/michel/Desktop/ibeacons/ibeacons/MC_T21-master/iBeacon/app/build/intermediates/exploded-aar/com.android.support/appcompat-v7/22.1.1/jars/classes.jar"
+        jumboMode="false"
+        revision="22.0.1"
+        sha1="a3ff3c506644c820eb2bdf06e8339f72be578551">
+        <dex dex="/home/michel/Desktop/ibeacons/ibeacons/MC_T21-master/iBeacon/app/build/intermediates/pre-dexed/debug/classes-164215a8589506e7af9b0eed0ea62b8c1b53a3cc.jar" />
+    </item>
+    <item
+        jar="/home/michel/Desktop/ibeacons/ibeacons/MC_T21-master/iBeacon/app/build/intermediates/exploded-aar/com.android.support/support-v4/22.1.1/jars/classes.jar"
+        jumboMode="false"
+        revision="22.0.1"
+        sha1="c95ba8152923e4872e86a82cfcba9a51c0214328">
+        <dex dex="/home/michel/Desktop/ibeacons/ibeacons/MC_T21-master/iBeacon/app/build/intermediates/pre-dexed/debug/classes-f156a6ea359869c5771e071f137b16694d0dc456.jar" />
+    </item>
+    <item
+        jar="/home/michel/Desktop/ibeacons/ibeacons/MC_T21-master/iBeacon/app/build/intermediates/exploded-aar/com.android.support/support-v4/22.1.1/jars/libs/internal_impl-22.1.1.jar"
+        jumboMode="false"
+        revision="22.0.1"
+        sha1="9e070ad32b2700b0343e8e0cccc437733d91ba3a">
+        <dex dex="/home/michel/Desktop/ibeacons/ibeacons/MC_T21-master/iBeacon/app/build/intermediates/pre-dexed/debug/internal_impl-22.1.1-b8d40c075b780653b34a2f29192b381e6e7d3bc3.jar" />
+    </item>
+    <item
+        jar="/home/michel/Desktop/ibeacons/ibeacons/MC_T21-master/iBeacon/app/build/intermediates/exploded-aar/com.jjoe64/graphview/4.0.1/jars/classes.jar"
+        jumboMode="false"
+        revision="22.0.1"
+        sha1="37bf8de5b4f9e7e93006db783b9b3168e32e38e9">
+        <dex dex="/home/michel/Desktop/ibeacons/ibeacons/MC_T21-master/iBeacon/app/build/intermediates/pre-dexed/debug/classes-6ef015e4037b24fe7f12240c89db42820c307e35.jar" />
+    </item>
+
+</items>
